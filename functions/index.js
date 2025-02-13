@@ -8,8 +8,10 @@ const admin = require('firebase-admin');
 const { onRequest } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 
+//const serviceAccount = require("../flytogether-69521-firebase-adminsdk-fbsvc-969462f74c.json");
 admin.initializeApp();
-const db = admin.firestore();
+
+var db = admin.firestore();
 
 const app = express();
 app.use(cors());
@@ -100,11 +102,12 @@ app.post('/api/sessions', async (req, res) => {
   const sessionData = {
     wishlist,
     wishlistTitle,
-    created: admin.firestore.FieldValue.serverTimestamp(),
+    //created: admin.firestore.FieldValue.serverTimestamp(),
   };
   try {
-    await db.collection('flightSessions').doc(sessionId).set(sessionData);
-    return res.json({ sessionId, ...sessionData });
+    await db.collection('flightsessions').doc(sessionId).set(sessionData);
+    return res.json({sessionId});
+
   } catch (error) {
     console.error('Error creating session:', error);
     return res.status(500).json({ message: 'Error creating session' });
@@ -115,7 +118,7 @@ app.post('/api/sessions', async (req, res) => {
 app.get('/api/sessions/:sessionId', async (req, res) => {
   const { sessionId } = req.params;
   try {
-    const doc = await db.collection('flightSessions').doc(sessionId).get();
+    const doc = await db.collection('flightsessions').doc(sessionId).get();
     if (!doc.exists) {
       return res.status(404).json({ message: 'Session not found' });
     }
@@ -134,7 +137,7 @@ app.put('/api/sessions/:sessionId', async (req, res) => {
     return res.status(400).json({ message: 'Invalid flights data' });
   }
   try {
-    const sessionRef = db.collection('flightSessions').doc(sessionId);
+    const sessionRef = db.collection('flightsessions').doc(sessionId);
     const doc = await sessionRef.get();
     if (!doc.exists) {
       return res.status(404).json({ message: 'Session not found' });

@@ -177,12 +177,10 @@ const shareSession = async () => {
     return;
   }
   try {
-    // Only send the wishlist and title—not the full search results.
     const payload = { wishlist, wishlistTitle };
-    console.log(wishlist)
-    console.log(wishlistTitle)
     const response = await axios.post('/api/sessions', payload);
     const { sessionId } = response.data;
+    console.log("Session ID:", sessionId);
     const shareLink = `${window.location.origin}/session/${sessionId}`;
     navigator.clipboard.writeText(shareLink);
     alert(`Shareable link copied to clipboard:\n${shareLink}`);
