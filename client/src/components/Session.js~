@@ -1,0 +1,82 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useParams } from 'react-router-dom';
+import { Box, Typography, Paper, IconButton, Button, Grid } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+
+const Session = () => {
+  const { sessionId } = useParams();
+  const [flights, setFlights] = useState([]);
+
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/api/sessions/${sessionId}`);
+        setFlights(response.data.flights);
+      } catch (error) {
+        console.error('Error fetching session', error);
+      }
+    };
+    fetchSession();
+  }, [sessionId]);
+
+  const moveFlight = (index, direction) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= flights.length) return;
+    const newFlights = [...flights];
+    [newFlights[index], newFlights[newIndex]] = [newFlights[newIndex], newFlights[index]];
+    setFlights(newFlights);
+  };
+
+  const deleteFlight = (index) => {
+    setFlights(flights.filter((_, i) => i !== index));
+  };
+
+  const handleSave = async () => {
+    try {
+      await axios.put(`http://localhost:5000/api/sessions/${sessionId}`, { flights });
+      alert('Session updated!');
+    } catch (error) {
+      console.error('Error saving session', error);
+    }
+  };
+
+  return (
+    <Box>
+      <Typography variant="h4" gutterBottom>
+        Session: {sessionId}
+      </Typography>
+      {flights.length === 0 ? (
+        <Typography>No flights in this session.</Typography>
+      ) : (
+        <Grid container spacing={2}>
+          {flights.map((flight, index) => (
+            <Grid item xs={12} key={index}>
+              <Paper sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
+                <Typography variant="body1" sx={{ flexGrow: 1 }}>
+                  Flight Option {index + 1}: {flight.itineraries?.[0]?.segments?.[0]?.departure?.iataCode} to {flight.itineraries?.[0]?.segments?.[0]?.arrival?.iataCode} on {flight.itineraries?.[0]?.segments?.[0]?.departure?.at}
+                </Typography>
+                <IconButton onClick={() => moveFlight(index, -1)} disabled={index === 0}>
+                  <ArrowUpwardIcon />
+                </IconButton>
+                <IconButton onClick={() => moveFlight(index, 1)} disabled={index === flights.length - 1}>
+                  <ArrowDownwardIcon />
+                </IconButton>
+                <IconButton onClick={() => deleteFlight(index)}>
+                  <DeleteIcon />
+                </IconButton>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+      <Box sx={{ mt: 2 }}>
+        <Button variant="contained" color="primary" onClick={handleSave}>Save Changes</Button>
+      </Box>
+    </Box>
+  );
+};
+
+export default Session;

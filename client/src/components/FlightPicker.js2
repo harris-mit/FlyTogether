@@ -1,0 +1,288 @@
+import React, { useState } from 'react';
+import axios from 'axios';
+import {
+  Box,
+  Button,
+  Grid,
+  Paper,
+  TextField,
+  Typography,
+  IconButton,
+} from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import FlightCard from './FlightCard';
+
+const FlightPicker = () => {
+  const [origin, setOrigin] = useState('');
+  const [destination, setDestination] = useState('');
+  const [departureDate, setDepartureDate] = useState('');
+  const [adults, setAdults] = useState(1);
+  const [availableFlights, setAvailableFlights] = useState([]);
+  const [selectedFlights, setSelectedFlights] = useState([]);
+  const navigate = useNavigate();
+
+  const handleSearch = async () => {
+    if (!origin || !destination || !departureDate) {
+      alert('Please fill in Origin, Destination, and Departure Date.');
+      return;
+    }
+    try {
+      const response = await axios.get('http://localhost:5001/api/search', {
+        params: { origin, destination, departureDate, adults },
+      });
+      const flights = response.data.data || [];
+      // Map flights with a unique string id and a notes field.
+      const flightsWithIds = flights.map((flight, index) => ({
+        ...flight,
+        id: `flight-${index}`,
+        notes: '',
+      }));
+      setAvailableFlights(flightsWithIds);
+      setSelectedFlights([]);
+    } catch (error) {
+      console.error('Error searching flights:', error);
+    }
+  };
+
+  const onDragEnd = (result) => {
+    console.log("onDragEnd result:", result);
+    const { source, destination } = result;
+    if (!destination) return; // dropped outside a droppable
+
+    // Drag from Available → Selected
+    if (source.droppableId === 'available' && destination.droppableId === 'selected') {
+      const draggedItem = availableFlights[source.index];
+      const newAvailable = Array.from(availableFlights);
+      newAvailable.splice(source.index, 1);
+      const newSelected = Array.from(selectedFlights);
+      newSelected.splice(destination.index, 0, draggedItem);
+      setAvailableFlights(newAvailable);
+      setSelectedFlights(newSelected);
+      return;
+    }
+
+    // Reorder within Available
+    if (source.droppableId === 'available' && destination.droppableId === 'available') {
+      const newAvailable = Array.from(availableFlights);
+      const [movedItem] = newAvailable.splice(source.index, 1);
+      newAvailable.splice(destination.index, 0, movedItem);
+      setAvailableFlights(newAvailable);
+      return;
+    }
+
+    // Reorder within Selected
+    if (source.droppableId === 'selected' && destination.droppableId === 'selected') {
+      const newSelected = Array.from(selectedFlights);
+      const [movedItem] = newSelected.splice(source.index, 1);
+      newSelected.splice(destination.index, 0, movedItem);
+      setSelectedFlights(newSelected);
+      return;
+    }
+
+    // Optional: Allow dragging from Selected back to Available
+    if (source.droppableId === 'selected' && destination.droppableId === 'available') {
+      const draggedItem = selectedFlights[source.index];
+      const newSelected = Array.from(selectedFlights);
+      newSelected.splice(source.index, 1);
+      const newAvailable = Array.from(availableFlights);
+      newAvailable.splice(destination.index, 0, draggedItem);
+      setSelectedFlights(newSelected);
+      setAvailableFlights(newAvailable);
+      return;
+    }
+  };
+
+  const handleNoteChange = (id, note) => {
+    const newSelected = selectedFlights.map((flight) =>
+      flight.id === id ? { ...flight, notes: note } : flight
+    );
+    setSelectedFlights(newSelected);
+  };
+
+  const handleCreateSession = async () => {
+    if (selectedFlights.length === 0) {
+      alert('Please drag at least one flight into the Selected column.');
+      return;
+    }
+    try {
+      const response = await axios.post('http://localhost:5001/api/sessions', {
+        flights: selectedFlights,
+      });
+      const { sessionId } = response.data;
+      navigate(`/session/${sessionId}`);
+    } catch (error) {
+      console.error('Error creating session:', error);
+    }
+  };
+
+  return (
+    <Box sx={{ p: 4, backgroundColor: '#f0f2f5', minHeight: '100vh' }}>
+      <Typography variant="h3" align="center" gutterBottom>
+        Flight Picker
+      </Typography>
+      <Paper sx={{ p: 4, maxWidth: 800, margin: 'auto', mb: 4 }}>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              label="Origin"
+              value={origin}
+              onChange={(e) => setOrigin(e.target.value)}
+              fullWidth
+              required
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              label="Destination"
+              value={destination}
+              onChange={(e) => setDestination(e.target.value)}
+              fullWidth
+              required
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              label="Departure Date"
+              type="date"
+              value={departureDate}
+              onChange={(e) => setDepartureDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+              required
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              label="Adults"
+              type="number"
+              value={adults}
+              onChange={(e) => setAdults(e.target.value)}
+              fullWidth
+              required
+            />
+          </Grid>
+          <Grid item xs={12} sm={8} display="flex" alignItems="center">
+            <Button variant="contained" onClick={handleSearch} sx={{ ml: 'auto' }}>
+              Search Flights
+            </Button>
+          </Grid>
+        </Grid>
+      </Paper>
+      <DragDropContext onDragEnd={onDragEnd}>
+        <Grid container spacing={2}>
+          {/* Left Column: Available Flights */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 2, minHeight: 400 }}>
+              <Typography variant="h5" gutterBottom>
+                Available Flights
+              </Typography>
+              <Droppable droppableId="available">
+                {(provided) => (
+                  <Box
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    sx={{
+                      minHeight: 300,
+                      border: '2px dashed #ccc',
+                      borderRadius: 2,
+                      p: 1,
+                    }}
+                  >
+                    {availableFlights.map((flight, index) => (
+                      <Draggable key={flight.id} draggableId={flight.id} index={index}>
+                        {(provided, snapshot) => (
+                          <Box
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            sx={{
+                              mb: 2,
+                              backgroundColor: snapshot.isDragging ? '#e0e0e0' : '#fff',
+                              border: '1px solid #ccc',
+                              borderRadius: 1,
+                              p: 1,
+                            }}
+                          >
+                            {/* Optionally add a drag handle indicator */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                              <Typography variant="caption" sx={{ mr: 1 }}>
+                                ☰
+                              </Typography>
+                              <Typography variant="subtitle2">Flight {index + 1}</Typography>
+                            </Box>
+                            <FlightCard flight={flight} onNoteChange={() => {}} />
+                          </Box>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </Box>
+                )}
+              </Droppable>
+            </Paper>
+          </Grid>
+
+          {/* Right Column: Selected Flights */}
+          <Grid item xs={12} md={6}>
+            <Paper sx={{ p: 2, minHeight: 400 }}>
+              <Typography variant="h5" gutterBottom>
+                Selected Flights
+              </Typography>
+              <Droppable droppableId="selected">
+                {(provided) => (
+                  <Box
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    sx={{
+                      minHeight: 300,
+                      border: '2px dashed #ccc',
+                      borderRadius: 2,
+                      p: 1,
+                    }}
+                  >
+                    {selectedFlights.map((flight, index) => (
+                      <Draggable key={flight.id} draggableId={flight.id} index={index}>
+                        {(provided, snapshot) => (
+                          <Box
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            sx={{
+                              mb: 2,
+                              backgroundColor: snapshot.isDragging ? '#e0e0e0' : '#fff',
+                              border: '1px solid #ccc',
+                              borderRadius: 1,
+                              p: 1,
+                            }}
+                          >
+                            {/* Drag handle indicator */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                              <Typography variant="caption" sx={{ mr: 1 }}>
+                                ☰
+                              </Typography>
+                              <Typography variant="subtitle2">Flight {index + 1}</Typography>
+                            </Box>
+                            <FlightCard flight={flight} onNoteChange={handleNoteChange} />
+                          </Box>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </Box>
+                )}
+              </Droppable>
+            </Paper>
+          </Grid>
+        </Grid>
+      </DragDropContext>
+      <Box sx={{ textAlign: 'center', mt: 4 }}>
+        <Button variant="contained" color="primary" onClick={handleCreateSession}>
+          Create Session
+        </Button>
+      </Box>
+    </Box>
+  );
+};
+
+export default FlightPicker;

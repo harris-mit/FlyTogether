@@ -1,0 +1,61 @@
+import React from 'react';
+import {
+  Card,
+  CardContent,
+  Typography,
+  Checkbox,
+  FormControlLabel,
+  TextField,
+  Box,
+} from '@mui/material';
+
+const FlightCard = ({ flight, onToggleSelect, onNoteChange }) => {
+  const { id, selected, itineraries } = flight;
+  // Assume the first itinerary/segment contains the primary details
+  const segment = itineraries?.[0]?.segments?.[0] || {};
+  const departure = segment.departure || {};
+  const arrival = segment.arrival || {};
+
+  return (
+    <Card variant="outlined" sx={{ mb: 2 }}>
+      <CardContent>
+        <Box display="flex" alignItems="center" justifyContent="space-between">
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={selected}
+                onChange={() => onToggleSelect(id)}
+              />
+            }
+            label={`Flight Option ${id + 1}`}
+          />
+        </Box>
+        <Typography variant="body1" sx={{ mt: 1 }}>
+          {departure.iataCode} → {arrival.iataCode}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Departure: {departure.at || 'N/A'}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Arrival: {arrival.at || 'N/A'}
+        </Typography>
+        {flight.price && (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Price: {flight.price.total} {flight.price.currency}
+          </Typography>
+        )}
+        <Box sx={{ mt: 2 }}>
+          <TextField
+            label="Add Note"
+            variant="outlined"
+            fullWidth
+            value={flight.notes || ''}
+            onChange={(e) => onNoteChange(id, e.target.value)}
+          />
+        </Box>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default FlightCard;
