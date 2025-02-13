@@ -27,7 +27,7 @@ const SharedSession = () => {
 
   // Fetch session data on mount.
   useEffect(() => {
-    axios.get(`http://localhost:5001/api/sessions/${sessionId}`)
+    axios.get(`/api/sessions/${sessionId}`)
       .then(res => {
         setWishlist(res.data.wishlist || []);
         setWishlistTitle(res.data.wishlistTitle || '');
@@ -71,7 +71,7 @@ const SharedSession = () => {
       return;
     }
     try {
-      const response = await axios.get('http://localhost:5001/api/search', {
+      const response = await axios.get('/api/search', {
         params: { origin, destination, departureDate, adults },
       });
       const flights = response.data.data || [];
@@ -123,7 +123,7 @@ const SharedSession = () => {
       newWishlist.splice(destination.index, 0, movedFlight);
       setSearchResults(newSearchResults);
       setWishlist(newWishlist);
-      axios.put(`http://localhost:5001/api/sessions/${sessionId}`, {
+      axios.put(`/api/sessions/${sessionId}`, {
         wishlist: newWishlist,
         wishlistTitle,
       }).catch(err => console.error('Error updating session', err));
@@ -139,7 +139,7 @@ const SharedSession = () => {
       newSearchResults.sort((a, b) => a.price - b.price);
       setWishlist(newWishlist);
       setSearchResults(newSearchResults);
-      axios.put(`http://localhost:5001/api/sessions/${sessionId}`, {
+      axios.put(`/api/sessions/${sessionId}`, {
         wishlist: newWishlist,
         wishlistTitle,
       }).catch(err => console.error('Error updating session', err));
@@ -152,7 +152,7 @@ const SharedSession = () => {
       const [movedFlight] = newWishlist.splice(source.index, 1);
       newWishlist.splice(destination.index, 0, movedFlight);
       setWishlist(newWishlist);
-      axios.put(`http://localhost:5001/api/sessions/${sessionId}`, {
+      axios.put(`/api/sessions/${sessionId}`, {
         wishlist: newWishlist,
         wishlistTitle,
       }).catch(err => console.error('Error updating session', err));
@@ -229,7 +229,7 @@ const SharedSession = () => {
         onChange={(e) => {
           const newTitle = e.target.value;
           setWishlistTitle(newTitle);
-          axios.put(`http://localhost:5001/api/sessions/${sessionId}`, {
+          axios.put(`/api/sessions/${sessionId}`, {
             wishlist,
             wishlistTitle: newTitle,
           }).catch(err => console.error('Error updating wishlist title', err));

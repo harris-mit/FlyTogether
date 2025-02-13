@@ -63,7 +63,7 @@ const Search = () => {
       return;
     }
     try {
-      const response = await axios.get('http://localhost:5001/api/search', {
+      const response = await axios.get('/api/search', {
         params: { origin, destination, departureDate, adults },
       });
       const flights = response.data.data || [];
@@ -125,7 +125,7 @@ const Search = () => {
       setWishlist(newWishlist);
       // Update the session on the backend
       axios
-        .put(`http://localhost:5001/api/sessions/${sessionId}`, {
+        .put(`/api/sessions/${sessionId}`, {
           wishlist: newWishlist,
           wishlistTitle,
         })
@@ -181,7 +181,7 @@ const shareSession = async () => {
     const payload = { wishlist, wishlistTitle };
     console.log(wishlist)
     console.log(wishlistTitle)
-    const response = await axios.post('http://localhost:5001/api/sessions', payload);
+    const response = await axios.post('/api/sessions', payload);
     const { sessionId } = response.data;
     const shareLink = `${window.location.origin}/session/${sessionId}`;
     navigator.clipboard.writeText(shareLink);
