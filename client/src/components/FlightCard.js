@@ -1,132 +1,153 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardContent,
-  Typography,
-  TextField,
   Box,
-  Divider
+  Typography,
+  Divider,
+  TextField,
+  Collapse,
+  Button,
 } from '@mui/material';
-
-import IconButton from '@mui/material/IconButton';
-import DeleteIcon from '@mui/icons-material/Delete';
-
+import carriersDict from '../utils/carriersDict';
+import {
+  formatDateTime,
+  formatDateForExpedia,
+  computeLayover,
+} from '../utils/dateUtils';
 
 const FlightCard = ({ flight, onNoteChange }) => {
+  const [expanded, setExpanded] = useState(false);
+
   if (!flight) return null;
-  
-  // Use the first itinerary for display.
+
   const itinerary = flight.itineraries?.[0];
   if (!itinerary) return null;
-  
+
   const segments = itinerary.segments || [];
   const overallDeparture = segments[0]?.departure || {};
   const overallArrival = segments[segments.length - 1]?.arrival || {};
-  
-  // Total stops is the number of connections (segments - 1)
-  const totalStops = segments.length - 1;
-  
-  // Helper to format a date/time string to something like "08:45 AM"
-  const formatDateTime = (dateStr) => {
-    if (!dateStr) return 'N/A';
-    const options = { hour: '2-digit', minute: '2-digit' };
-    return new Date(dateStr).toLocaleTimeString([], options);
-  };
 
-  // Compute layover duration between arrival of one segment and departure of the next.
-  const computeLayover = (arrivalTime, nextDepartureTime) => {
-    if (!arrivalTime || !nextDepartureTime) return 'N/A';
-    const diffMs = new Date(nextDepartureTime) - new Date(arrivalTime);
-    const diffMins = Math.floor(diffMs / 60000);
-    const hours = Math.floor(diffMins / 60);
-    const minutes = diffMins % 60;
-    return `${hours > 0 ? hours + 'h ' : ''}${minutes}m`;
-  };
-
-  // If dictionaries are provided in flight, use them; otherwise, fall back to the codes.
-  const carriersDict = flight.dictionaries?.carriers || {};
-  const aircraftDict = flight.dictionaries?.aircraft || {};
+  const expediaUrl = `https://www.expedia.com/Flights-Search?trip=oneway
+    &leg1=from:${overallDeparture.iataCode},to:${overallArrival.iataCode},
+    departure:${formatDateForExpedia(overallDeparture.at)}TANYT
+    &passengers=adults:1,children:0,seniors:0,infantinlap:N&mode=search`.replace(/\s+/g, '');
 
   return (
-    <Card variant="outlined" sx={{ p: 2, mb: 2, backgroundColor: '#fff' }}>
+    <Card
+      variant="outlined"
+      onClick={() => setExpanded((prev) => !prev)}
+      sx={{
+        p: 2,
+        mb: 2,
+        backgroundColor: '#1e1e1e',
+        borderColor: '#333',
+        color: '#fff',
+        cursor: 'pointer',
+      }}
+    >
       <CardContent>
-        {/* Itinerary Summary */}
         <Box mb={2}>
           <Typography variant="h6">
             {overallDeparture.iataCode} → {overallArrival.iataCode}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Departure: {overallDeparture.at ? formatDateTime(overallDeparture.at) : 'N/A'} | Arrival: {overallArrival.at ? formatDateTime(overallArrival.at) : 'N/A'}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Total Duration: {itinerary.duration || 'N/A'} | Stops: {totalStops}
+          <Typography variant="body2" sx={{ color: '#bbb' }}>
+            Departure: {formatDateTime(overallDeparture.at)} <br />
+            Arrival: {formatDateTime(overallArrival.at)}
           </Typography>
           {flight.price && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{ color: '#bbb' }}>
               Price: {flight.price.total} {flight.price.currency}
             </Typography>
           )}
+          <Typography variant="body2" sx={{ color: '#bbb' }}>
+            Airline:{' '}
+            {carriersDict[segments[0]?.carrierCode] ||
+              `IATA code ${segments[0]?.carrierCode}`}
+          </Typography>
         </Box>
 
-        <Divider sx={{ mb: 2 }} />
-
-        {/* Detailed Segment Information */}
-        {segments.map((segment, index) => {
-          const departure = segment.departure || {};
-          const arrival = segment.arrival || {};
-          const carrierCode = segment.carrierCode || 'N/A';
-          const airlineName = carriersDict[carrierCode] || carrierCode;
-          const flightNumber = segment.number || 'N/A';
-          const aircraftCode = segment.aircraft?.code || 'N/A';
-          const aircraftName = aircraftDict[aircraftCode] || aircraftCode;
-
-          return (
-            <Box key={segment.id} mb={2}>
-              <Typography variant="subtitle1">
-                Segment {index + 1}: {departure.iataCode} → {arrival.iataCode}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {airlineName} {flightNumber} | Aircraft: {aircraftName}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Departure: {departure.at ? formatDateTime(departure.at) : 'N/A'} | Arrival: {arrival.at ? formatDateTime(arrival.at) : 'N/A'}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Duration: {segment.duration || 'N/A'}
-              </Typography>
-
-              {/* Show layover details if not the last segment */}
-              {index < segments.length - 1 && (
-                <Box ml={2} mt={1}>
-                  {(() => {
-                    const nextSegment = segments[index + 1];
-                    const layover = computeLayover(arrival.at, nextSegment.departure.at);
-                    return (
-                      <Typography variant="body2" color="text.secondary">
-                        Layover at {arrival.iataCode}: {layover}
-                      </Typography>
-                    );
-                  })()}
-                </Box>
-              )}
-
-              {index < segments.length - 1 && <Divider sx={{ my: 1 }} />}
-            </Box>
-          );
-        })}
-
-        {/* Editable Notes Field */}
         <TextField
           label="Notes"
           variant="outlined"
           fullWidth
           value={flight.notes || ''}
-          //onMouseDown={(e) => e.stopPropagation()} // Prevent drag start from this element.
-          onChange={(e) =>
-            onNoteChange(flight.id, e.target.value)
-          }
-          sx={{ mt: 2 }}
+          onChange={(e) => onNoteChange(flight.id, e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          sx={{
+            mb: 2,
+            backgroundColor: '#2c2c2c',
+            '& .MuiInputLabel-root': { color: '#bbb' },
+            '& .MuiInputBase-input': { color: '#fff' },
+          }}
         />
+
+        <Collapse in={expanded}>
+          <Box mt={2}>
+            <Divider sx={{ mb: 2, borderColor: '#333' }} />
+            {segments.map((segment, index) => {
+              const departure = segment.departure || {};
+              const arrival = segment.arrival || {};
+              const carrierCode = segment.carrierCode;
+              const flightNumber = segment.number || 'N/A';
+              const aircraftCode = segment.aircraft?.code || 'N/A';
+              const aircraftName =
+                flight?.dictionaries?.aircraft?.[aircraftCode] || aircraftCode;
+
+              return (
+                <Box key={segment.id} mb={2}>
+                  <Typography variant="subtitle1">
+                    Segment {index + 1}: {departure.iataCode} → {arrival.iataCode}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#bbb' }}>
+                    {carriersDict[carrierCode] || carrierCode} {flightNumber} | 
+                    Aircraft: {aircraftName}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#bbb' }}>
+                    Departure: {formatDateTime(departure.at)} <br />
+                    Arrival: {formatDateTime(arrival.at)}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#bbb' }}>
+                    Duration: {segment.duration || 'N/A'}
+                  </Typography>
+
+                  {index < segments.length - 1 && (
+                    <Box ml={2} mt={1}>
+                      <Typography variant="body2" sx={{ color: '#bbb' }}>
+                        Layover at {arrival.iataCode}:{' '}
+                        {computeLayover(arrival.at, segments[index + 1].departure?.at)}
+                      </Typography>
+                    </Box>
+                  )}
+                  {index < segments.length - 1 && (
+                    <Divider sx={{ my: 1, borderColor: '#333' }} />
+                  )}
+                </Box>
+              );
+            })}
+          </Box>
+        </Collapse>
+
+        <Button
+          variant="contained"
+          onClick={(e) => {
+            e.stopPropagation();
+            window.open(expediaUrl, '_blank');
+          }}
+          sx={{
+            mt: 2,
+            backgroundColor: '#333',
+            color: '#fff',
+            textTransform: 'none',
+            boxShadow: 'none',
+            '&:hover': {
+              backgroundColor: '#444',
+              boxShadow: 'none',
+            },
+          }}
+        >
+          Book
+        </Button>
       </CardContent>
     </Card>
   );

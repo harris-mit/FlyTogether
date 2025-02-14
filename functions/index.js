@@ -21,19 +21,6 @@ require('dotenv').config();
 const AMADEUS_API_KEY = defineSecret('AMADEUS_API_KEY');
 const AMADEUS_API_SECRET = defineSecret('AMADEUS_API_SECRET');
 
-// let AMADEUS_API_KEY, AMADEUS_API_SECRET;
-
-// // Use Firebase Functions config if available; otherwise, fall back to .env for local development.
-// if (functions.config() && functions.config().amadeus) {
-//   const config = functions.config();
-//   AMADEUS_API_KEY = config.amadeus.apikey;
-//   AMADEUS_API_SECRET = config.amadeus.apisecret;
-// } else {
-//   require('dotenv').config();
-//   AMADEUS_API_KEY = process.env.AMADEUS_API_KEY;
-//   AMADEUS_API_SECRET = process.env.AMADEUS_API_SECRET;
-// }
-
 // Get Amadeus access token
 async function getAccessToken() 
 {
@@ -64,6 +51,25 @@ app.get('/api/search', async (req, res) => {
     });
   }
   try {
+    // rate limit ////
+    const uid = req.user?.uid || req.ip; // Use user ID if authenticated, otherwise IP
+    const userRef = db.collection('rateLimits').doc(uid);
+    const userData = await userRef.get();
+  
+    const now = Date.now();
+    const timeWindow = 60000; // 1 minute
+    const maxRequests = 3;
+  
+    let requestTimes = userData.exists ? userData.data().requests || [] : [];
+    requestTimes = requestTimes.filter(timestamp => now - timestamp < timeWindow);
+  
+    if (requestTimes.length >= maxRequests) {
+      return res.status(429).json({ message: 'Too many requests. Try again later.' });
+    }
+    // done rate limit check/// 
+    requestTimes.push(now);
+    await userRef.set({ requests: requestTimes });
+
     const accessToken = await getAccessToken();
     const params = {
       originLocationCode: origin,
@@ -149,7 +155,7 @@ app.put('/api/sessions/:sessionId', async (req, res) => {
     };
     await sessionRef.update(updatedData);
     const updatedDoc = await sessionRef.get();
-    return res.json({ sessionId, ...updatedDoc.data() });
+    return res.json({ sessionId });
   } catch (error) {
     console.error('Error updating session:', error);
     return res.status(500).json({ message: 'Error updating session' });

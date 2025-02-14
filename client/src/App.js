@@ -1,24 +1,26 @@
 import React from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Container, Button } from '@mui/material';
-import Search from './components/Search';
-import Session from './components/Session';
+import Search from './pages/Search';
+import SharedSession from './pages/SharedSessions';
 
 function App() {
   return (
     <>
-      <AppBar position="static">
+      <AppBar position="static" sx={{ backgroundColor: '#1e1e1e' }}>
         <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Collaborative Flight Picker
+          <Typography variant="h6" sx={{ flexGrow: 1, color: '#fff' }}>
+            FlyTogether
           </Typography>
-          <Button color="inherit" component={Link} to="/">Search</Button>
+          <Button component={Link} to="/" sx={{ color: '#fff' }}>
+            Start new search
+          </Button>
         </Toolbar>
       </AppBar>
       <Container sx={{ marginTop: 4 }}>
         <Routes>
           <Route path="/" element={<Search />} />
-          <Route path="/session/:sessionId" element={<Session />} />
+          <Route path="/session/:sessionId" element={<SharedSession />} />
         </Routes>
       </Container>
     </>
