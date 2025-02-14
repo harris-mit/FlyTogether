@@ -12,7 +12,7 @@ import IconButton from '@mui/material/IconButton';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 
-const FlightCard = ({ flight, onNoteChange, onDelete }) => {
+const FlightCard = ({ flight, onNoteChange }) => {
   if (!flight) return null;
   
   // Use the first itinerary for display.
@@ -121,19 +121,12 @@ const FlightCard = ({ flight, onNoteChange, onDelete }) => {
           variant="outlined"
           fullWidth
           value={flight.notes || ''}
+          //onMouseDown={(e) => e.stopPropagation()} // Prevent drag start from this element.
           onChange={(e) =>
-            onNoteChange && onNoteChange(flight.id, e.target.value)
+            onNoteChange(flight.id, e.target.value)
           }
           sx={{ mt: 2 }}
         />
-        {/* Delete button (only shown if onDelete is passed) */}
-        {onDelete && (
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-            <IconButton onClick={() => onDelete(flight.id)} aria-label="delete">
-              <DeleteIcon />
-            </IconButton>
-          </Box>
-        )}
       </CardContent>
     </Card>
   );

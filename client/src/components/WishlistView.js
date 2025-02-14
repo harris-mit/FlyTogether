@@ -52,9 +52,6 @@ const WishlistView = ({
                 justifyContent: 'space-between',
               }}
             >
-              <div style={{ flex: 1 }}>
-                <FlightCard flight={flight} onDelete={() => handleDelete(index)}/>
-              </div>
             </div>
           )}
         </Draggable>

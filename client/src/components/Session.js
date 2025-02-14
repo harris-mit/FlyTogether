@@ -52,17 +52,26 @@ const SharedSession = () => {
 
   // Update notes in both searchResults and wishlist.
   const handleNoteChange = (flightId, note) => {
-    setSearchResults(prev =>
-      prev.map(flight =>
-        flight.id === flightId ? { ...flight, notes: note } : flight
-      )
+    console.log("need to update the session data")
+    // Update searchResults state.
+    const updatedSearchResults = searchResults.map(flight =>
+      flight.id === flightId ? { ...flight, notes: note } : flight
     );
-    setWishlist(prev =>
-      prev.map(flight =>
-        flight.id === flightId ? { ...flight, notes: note } : flight
-      )
+    setSearchResults(updatedSearchResults);
+  
+    // Update wishlist state.
+    const updatedWishlist = wishlist.map(flight =>
+      flight.id === flightId ? { ...flight, notes: note } : flight
     );
+    setWishlist(updatedWishlist);
+  
+    // Update the session in the database.
+    axios.put(`/api/sessions/${sessionId}`, {
+      wishlist: updatedWishlist,
+      wishlistTitle,
+    }).catch(err => console.error('Error updating session note', err));
   };
+  
 
   // Search flights (similar to Search.js).
   const handleSearch = async () => {

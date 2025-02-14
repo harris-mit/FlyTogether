@@ -132,8 +132,8 @@ app.get('/api/sessions/:sessionId', async (req, res) => {
 // Update an existing session stored in Firestore.
 app.put('/api/sessions/:sessionId', async (req, res) => {
   const { sessionId } = req.params;
-  const { flights, available, wishlist, wishlistTitle } = req.body;
-  if (!flights && !available && !wishlist) {
+  const {wishlist, wishlistTitle } = req.body;
+  if (!wishlistTitle && !wishlist && !sessionId) {
     return res.status(400).json({ message: 'Invalid flights data' });
   }
   try {
@@ -143,8 +143,6 @@ app.put('/api/sessions/:sessionId', async (req, res) => {
       return res.status(404).json({ message: 'Session not found' });
     }
     const updatedData = {
-      flights,
-      available,
       wishlist,
       wishlistTitle,
       updated: admin.firestore.FieldValue.serverTimestamp(),
