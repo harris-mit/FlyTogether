@@ -206,11 +206,21 @@ const shareSession = async () => {
   );
 
   return (
-    <Box sx={{ p: 4, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+    <Box sx={{ p: 4, backgroundColor: '#121212', minHeight: '100vh', color: '#fff' }}>
       <Typography variant="h3" gutterBottom align="center">
         Flight Picker
       </Typography>
-      <Paper elevation={3} sx={{ p: 4, maxWidth: 600, margin: 'auto', mb: 4 }}>
+      <Paper
+        elevation={3}
+        sx={{
+          p: 4,
+          maxWidth: 600,
+          margin: 'auto',
+          mb: 4,
+          backgroundColor: '#1e1e1e',
+          color: '#fff',
+        }}
+      >
         <Typography variant="h5" gutterBottom>
           Search Flights
         </Typography>
@@ -222,6 +232,11 @@ const shareSession = async () => {
               onChange={(e) => setOrigin(e.target.value)}
               fullWidth
               required
+              sx={{
+                backgroundColor: '#2c2c2c',
+                '& .MuiInputLabel-root': { color: '#bbb' },
+                '& .MuiInputBase-input': { color: '#fff' },
+              }}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -231,6 +246,11 @@ const shareSession = async () => {
               onChange={(e) => setDestination(e.target.value)}
               fullWidth
               required
+              sx={{
+                backgroundColor: '#2c2c2c',
+                '& .MuiInputLabel-root': { color: '#bbb' },
+                '& .MuiInputBase-input': { color: '#fff' },
+              }}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -242,6 +262,11 @@ const shareSession = async () => {
               InputLabelProps={{ shrink: true }}
               fullWidth
               required
+              sx={{
+                backgroundColor: '#2c2c2c',
+                '& .MuiInputLabel-root': { color: '#bbb' },
+                '& .MuiInputBase-input': { color: '#fff' },
+              }}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -252,11 +277,16 @@ const shareSession = async () => {
               onChange={(e) => setAdults(e.target.value)}
               fullWidth
               required
+              sx={{
+                backgroundColor: '#2c2c2c',
+                '& .MuiInputLabel-root': { color: '#bbb' },
+                '& .MuiInputBase-input': { color: '#fff' },
+              }}
             />
           </Grid>
         </Grid>
         <Box sx={{ mt: 2, textAlign: 'center' }}>
-          <Button variant="contained" onClick={handleSearch}>
+          <Button variant="contained" onClick={handleSearch} sx={{ backgroundColor: '#333' }}>
             Search
           </Button>
         </Box>
@@ -279,7 +309,12 @@ const shareSession = async () => {
               }}
               variant="outlined"
               fullWidth
-              sx={{ mb: 2 }}
+              sx={{
+                mb: 2,
+                backgroundColor: '#2c2c2c',
+                '& .MuiInputLabel-root': { color: '#bbb' },
+                '& .MuiInputBase-input': { color: '#fff' },
+              }}
             >
               <MenuItem value="any">Any</MenuItem>
               <MenuItem value="0">Non-stop</MenuItem>
@@ -291,7 +326,12 @@ const shareSession = async () => {
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  style={{ minHeight: '300px', padding: '10px', background: '#fafafa' }}
+                  style={{
+                    minHeight: '300px',
+                    padding: '10px',
+                    background: '#1e1e1e',
+                    borderRadius: '4px',
+                  }}
                 >
                   {paginatedResults.map((flight, index) => (
                     <Draggable key={flight.id} draggableId={flight.id} index={index}>
@@ -303,7 +343,7 @@ const shareSession = async () => {
                           style={{
                             ...provided.draggableProps.style,
                             marginBottom: '10px',
-                            backgroundColor: snapshot.isDragging ? '#e0e0e0' : 'white',
+                            backgroundColor: snapshot.isDragging ? '#333' : '#2c2c2c',
                             padding: '10px',
                             borderRadius: '5px',
                           }}
@@ -322,6 +362,7 @@ const shareSession = async () => {
                 variant="contained"
                 onClick={() => setAvailablePage((prev) => prev - 1)}
                 disabled={availablePage === 0}
+                sx={{ backgroundColor: '#333' }}
               >
                 <ArrowBackIosIcon />
               </Button>
@@ -332,6 +373,7 @@ const shareSession = async () => {
                 variant="contained"
                 onClick={() => setAvailablePage((prev) => prev + 1)}
                 disabled={availablePage >= totalPages - 1}
+                sx={{ backgroundColor: '#333' }}
               >
                 <ArrowForwardIosIcon />
               </Button>
@@ -340,20 +382,33 @@ const shareSession = async () => {
 
           {/* Wishlist Column */}
           <Grid item xs={6}>
+          <Typography variant="h5" gutterBottom>
+              Top Flights
+            </Typography>
             <TextField
-              label="Wishlist Title"
+              label="Trip Title"
               variant="outlined"
               fullWidth
               value={wishlistTitle}
               onChange={(e) => setWishlistTitle(e.target.value)}
-              sx={{ mb: 2 }}
+              sx={{
+                mb: 2,
+                backgroundColor: '#2c2c2c',
+                '& .MuiInputLabel-root': { color: '#bbb' },
+                '& .MuiInputBase-input': { color: '#fff' },
+              }}
             />
             <Droppable droppableId="wishlist">
               {(provided) => (
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  style={{ minHeight: '300px', padding: '10px', background: '#ffefc1' }}
+                  style={{
+                    minHeight: '300px',
+                    padding: '10px',
+                    background: '#1e1e1e',
+                    borderRadius: '4px',
+                  }}
                 >
                   {wishlist.map((flight, index) => (
                     <Draggable key={flight.id} draggableId={flight.id} index={index}>
@@ -365,7 +420,7 @@ const shareSession = async () => {
                           style={{
                             ...provided.draggableProps.style,
                             marginBottom: '10px',
-                            backgroundColor: snapshot.isDragging ? '#ffe082' : 'white',
+                            backgroundColor: snapshot.isDragging ? '#333' : '#2c2c2c',
                             padding: '10px',
                             borderRadius: '5px',
                           }}
@@ -380,8 +435,8 @@ const shareSession = async () => {
               )}
             </Droppable>
             <Box sx={{ textAlign: 'center', mt: 2 }}>
-              <Button variant="contained" color="primary" onClick={shareSession}>
-                Share Wishlist
+              <Button variant="contained" onClick={shareSession} sx={{ backgroundColor: '#333' }}>
+                Share Top Flights
               </Button>
             </Box>
           </Grid>

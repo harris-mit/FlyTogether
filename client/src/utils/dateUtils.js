@@ -3,6 +3,17 @@
 /**
  * Format date and time for display (e.g. "Mar 1, 2025, 12:00 PM").
  */
+export function formatTime(dateStr) {
+  if (!dateStr) return 'N/A';
+  const options = {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  };
+  return new Date(dateStr).toTimeString([], options).split(' ')[0];
+}
 export function formatDateTime(dateStr) {
     if (!dateStr) return 'N/A';
     const options = {

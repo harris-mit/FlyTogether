@@ -1,6 +1,9 @@
 // src/pages/Search.jsx
 
 import React, { useState, useEffect } from 'react';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
 import {
   Box,
   Typography,
@@ -10,6 +13,9 @@ import {
   Button,
   MenuItem,
 } from '@mui/material';
+import {
+  onAuthStateChanged
+} from 'firebase/auth';
 import { DragDropContext } from 'react-beautiful-dnd';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
@@ -18,6 +24,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { searchFlights } from '../services/flightService';
 import { createSession } from '../services/sessionService';
 import FlightList from '../components/FlightList';
+import { auth } from '../firebase';
 
 const PAGE_SIZE = 10;
 
@@ -27,14 +34,25 @@ const Search = () => {
   const [destination, setDestination] = useState('');
   const [departureDate, setDepartureDate] = useState('');
   const [adults, setAdults] = useState(1);
+  const [travelClass, setTravelClass] = useState('');
 
   // Searched flights and top picks
   const [results, setResults] = useState([]);
   const [wishlist, setWishlist] = useState([]);
+  const [sharedWith, setSharedWith] = useState([]);
+  const [user, setUser] = useState(null);
 
   // Pagination and filtering
   const [availablePage, setAvailablePage] = useState(0);
   const [stopsFilter, setStopsFilter] = useState('any');
+
+  // get the user if exists
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Re-check pagination boundaries if results or filter change
   useEffect(() => {
@@ -74,7 +92,7 @@ const Search = () => {
       return;
     }
     try {
-      const flights = await searchFlights({ origin, destination, departureDate, adults });
+      const flights = await searchFlights({ origin, destination, departureDate, adults, travelClass });
       const flightsWithIDs = flights.map((f) => ({
         ...f,
         id: uuidv4(),
@@ -162,10 +180,11 @@ const Search = () => {
       return;
     }
     try {
-      const { sessionId } = await createSession({ wishlist, wishlistTitle });
+      const { sessionId } = await createSession({ wishlist, wishlistTitle, sharedWith: [user.email] });
       const shareLink = `${window.location.origin}/session/${sessionId}`;
       navigator.clipboard.writeText(shareLink);
       alert(`Shareable link copied to clipboard:\n${shareLink}`);
+      window.location.href = shareLink;
     } catch (error) {
       console.error('Error sharing session:', error);
       alert('Failed to share session.');
@@ -264,7 +283,26 @@ const Search = () => {
               }}
             />
           </Grid>
+                {/* Additional Optional Fields */}
+        {/* Travel Class */}
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth sx={{ backgroundColor: '#2c2c2c' }}>
+            <InputLabel sx={{ color: '#bbb' }}>Travel Class</InputLabel>
+            <Select
+              value={travelClass}
+              onChange={(e) => setTravelClass(e.target.value)}
+              label="Travel Class"
+              sx={{ '& .MuiInputBase-input': { color: '#fff' } }}
+            >
+              <MenuItem value="ECONOMY">Economy</MenuItem>
+              <MenuItem value="PREMIUM_ECONOMY">Premium Economy</MenuItem>
+              <MenuItem value="BUSINESS">Business</MenuItem>
+              <MenuItem value="FIRST">First</MenuItem>
+            </Select>
+          </FormControl>
         </Grid>
+        </Grid>
+
         <Box sx={{ mt: 2, textAlign: 'center' }}>
           <Button variant="contained" onClick={handleSearch} sx={{ backgroundColor: '#333' }}>
             Search

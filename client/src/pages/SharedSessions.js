@@ -1,5 +1,8 @@
 // src/pages/SharedSession.jsx
 import React, { useState, useEffect } from 'react';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
 import { useParams } from 'react-router-dom';
 import {
   Box,
@@ -9,8 +12,11 @@ import {
   Grid,
   Paper,
   MenuItem,
+  Chip,
+  IconButton
 } from '@mui/material';
 import { DragDropContext } from 'react-beautiful-dnd';
+import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import { v4 as uuidv4 } from 'uuid';
@@ -27,6 +33,7 @@ const SharedSession = () => {
   // Wishlist data stored in this session
   const [wishlist, setWishlist] = useState([]);
   const [wishlistTitle, setWishlistTitle] = useState('');
+  const [sharedWith, setSharedWith] = useState([]);
 
   // "Available flights" search results
   const [searchResults, setSearchResults] = useState([]);
@@ -34,6 +41,7 @@ const SharedSession = () => {
   const [destination, setDestination] = useState('');
   const [departureDate, setDepartureDate] = useState('');
   const [adults, setAdults] = useState(1);
+  const [travelClass, setTravelClass] = useState('');
 
   // Filter/pagination
   const [stopsFilter, setStopsFilter] = useState('any');
@@ -46,6 +54,7 @@ const SharedSession = () => {
         const data = await fetchSession(sessionId); // GET /api/sessions/:sessionId
         setWishlist(data.wishlist || []);
         setWishlistTitle(data.wishlistTitle || '');
+        setSharedWith(data.sharedWith || []);
       } catch (err) {
         console.error('Error fetching session:', err);
       }
@@ -83,6 +92,7 @@ const SharedSession = () => {
       await updateSession(sessionId, {
         wishlist,
         wishlistTitle,
+        sharedWith // keep sharedWith in sync
       });
     } catch (err) {
       console.error('Error updating session note:', err);
@@ -98,7 +108,7 @@ const SharedSession = () => {
       return;
     }
     try {
-      const flights = await searchFlights({ origin, destination, departureDate, adults });
+      const flights = await searchFlights({ origin, destination, departureDate, adults, travelClass });
       const flightsWithIDs = flights.map((f) => ({
         ...f,
         id: uuidv4(),
@@ -158,6 +168,7 @@ const SharedSession = () => {
       updateSession(sessionId, {
         wishlist: newWishlist,
         wishlistTitle,
+        sharedWith
       }).catch((err) => console.error('Error updating session:', err));
       return;
     }
@@ -178,6 +189,7 @@ const SharedSession = () => {
       updateSession(sessionId, {
         wishlist: newWishlist,
         wishlistTitle,
+        sharedWith
       }).catch((err) => console.error('Error updating session:', err));
       return;
     }
@@ -196,6 +208,42 @@ const SharedSession = () => {
     }
   };
 
+    // NEW: add email
+  const handleAddEmail = async (e) => {
+    if (e.key === 'Enter' && e.target.value) {
+      const newEmail = e.target.value.trim();
+      if (newEmail && !sharedWith.includes(newEmail)) {
+        const updated = [...sharedWith, newEmail];
+        setSharedWith(updated);
+        e.target.value = '';
+
+        try {
+          await updateSession(sessionId, {
+            wishlist,
+            wishlistTitle,
+            sharedWith: updated
+          });
+        } catch (err) {
+          console.error('Error updating sharedWith:', err);
+        }
+      }
+    }
+  };
+
+  // NEW: remove email
+  const handleRemoveEmail = async (email) => {
+    const updated = sharedWith.filter((e) => e !== email);
+    setSharedWith(updated);
+    try {
+      await updateSession(sessionId, {
+        wishlist,
+        wishlistTitle,
+        sharedWith: updated
+      });
+    } catch (err) {
+      console.error('Error removing email:', err);
+    }
+  };
   // Filter + sort + paginate
   const filteredResults = searchResults.filter((flight) =>
     stopsFilter === 'any'
@@ -217,19 +265,19 @@ const SharedSession = () => {
 
       {/* Search form */}
       <Paper
-        elevation={3}
-        sx={{
-          p: 4,
-          maxWidth: 600,
-          margin: 'auto',
-          mb: 4,
-          backgroundColor: '#1e1e1e',
-          color: '#fff',
-        }}
-      >
-        <Typography variant="h5" gutterBottom>
-          Search Flights
-        </Typography>
+      elevation={3}
+      sx={{
+        p: 4,
+        maxWidth: 600,
+        margin: 'auto',
+        mb: 4,
+        backgroundColor: '#1e1e1e',
+        color: '#fff'
+      }}
+    >
+      <Typography variant="h5" gutterBottom>
+        Search Flights
+      </Typography>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
             <TextField
@@ -259,44 +307,68 @@ const SharedSession = () => {
               }}
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              label="Departure Date"
-              type="date"
-              value={departureDate}
-              onChange={(e) => setDepartureDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-              required
-              sx={{
-                backgroundColor: '#2c2c2c',
-                '& .MuiInputLabel-root': { color: '#bbb' },
-                '& .MuiInputBase-input': { color: '#fff' },
-              }}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              label="Adults"
-              type="number"
-              value={adults}
-              onChange={(e) => setAdults(e.target.value)}
-              fullWidth
-              required
-              sx={{
-                backgroundColor: '#2c2c2c',
-                '& .MuiInputLabel-root': { color: '#bbb' },
-                '& .MuiInputBase-input': { color: '#fff' },
-              }}
-            />
-          </Grid>
+        {/* Departure Date */}
+        <Grid item xs={12} sm={6}>
+          <TextField
+            label="Departure Date"
+            type="date"
+            value={departureDate}
+            onChange={(e) => setDepartureDate(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            fullWidth
+            required
+            sx={{
+              backgroundColor: '#2c2c2c',
+              '& .MuiInputLabel-root': { color: '#bbb' },
+              '& .MuiInputBase-input': { color: '#fff' }
+            }}
+          />
         </Grid>
-        <Box sx={{ mt: 2, textAlign: 'center' }}>
-          <Button variant="contained" onClick={handleSearch} sx={{ backgroundColor: '#333' }}>
-            Search
-          </Button>
-        </Box>
-      </Paper>
+        {/* Number of Adults */}
+        <Grid item xs={12} sm={6}>
+          <TextField
+            label="Adults"
+            type="number"
+            value={adults}
+            onChange={(e) => setAdults(e.target.value)}
+            fullWidth
+            required
+            sx={{
+              backgroundColor: '#2c2c2c',
+              '& .MuiInputLabel-root': { color: '#bbb' },
+              '& .MuiInputBase-input': { color: '#fff' }
+            }}
+          />
+        </Grid>
+        {/* Additional Optional Fields */}
+        {/* Travel Class */}
+        <Grid item xs={12} sm={6}>
+          <FormControl fullWidth sx={{ backgroundColor: '#2c2c2c' }}>
+            <InputLabel sx={{ color: '#bbb' }}>Travel Class</InputLabel>
+            <Select
+              value={travelClass}
+              onChange={(e) => setTravelClass(e.target.value)}
+              label="Travel Class"
+              sx={{ '& .MuiInputBase-input': { color: '#fff' } }}
+            >
+              <MenuItem value="ECONOMY">Economy</MenuItem>
+              <MenuItem value="PREMIUM_ECONOMY">Premium Economy</MenuItem>
+              <MenuItem value="BUSINESS">Business</MenuItem>
+              <MenuItem value="FIRST">First</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+      </Grid>
+      <Box sx={{ mt: 2, textAlign: 'center' }}>
+        <Button
+          variant="contained"
+          onClick={handleSearch}
+          sx={{ backgroundColor: '#333' }}
+        >
+          Search
+        </Button>
+      </Box>
+    </Paper>
 
       <Typography variant="h4" gutterBottom>
         Unique Trip ID: {sessionId}
@@ -313,6 +385,7 @@ const SharedSession = () => {
             await updateSession(sessionId, {
               wishlist,
               wishlistTitle: newTitle,
+              sharedWith
             });
           } catch (err) {
             console.error('Error updating wishlist title:', err);
@@ -325,6 +398,35 @@ const SharedSession = () => {
           '& .MuiInputBase-input': { color: '#fff' },
         }}
       />
+      {/* NEW: Shared With UI */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Shared With
+        </Typography>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+          {sharedWith.map((email) => (
+            <Chip
+              key={email}
+              label={email}
+              onDelete={() => handleRemoveEmail(email)}
+              deleteIcon={<DeleteIcon />}
+              sx={{ backgroundColor: '#2c2c2c', color: '#fff' }}
+            />
+          ))}
+        </Box>
+        <TextField
+          label="Type an email and press Enter"
+          variant="outlined"
+          fullWidth
+          onKeyDown={handleAddEmail}
+          sx={{
+            backgroundColor: '#2c2c2c',
+            '& .MuiInputLabel-root': { color: '#bbb' },
+            '& .MuiInputBase-input': { color: '#fff' },
+          }}
+        />
+      </Box>
+
 
       <DragDropContext onDragEnd={handleDragEnd}>
         <Grid container spacing={2} sx={{ maxWidth: 1000, margin: 'auto' }}>

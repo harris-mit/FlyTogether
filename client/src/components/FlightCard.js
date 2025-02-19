@@ -8,10 +8,12 @@ import {
   TextField,
   Collapse,
   Button,
+  Grid
 } from '@mui/material';
 import carriersDict from '../utils/carriersDict';
 import {
   formatDateTime,
+  formatTime,
   formatDateForExpedia,
   computeLayover,
 } from '../utils/dateUtils';
@@ -32,7 +34,16 @@ const FlightCard = ({ flight, onNoteChange }) => {
     &leg1=from:${overallDeparture.iataCode},to:${overallArrival.iataCode},
     departure:${formatDateForExpedia(overallDeparture.at)}TANYT
     &passengers=adults:1,children:0,seniors:0,infantinlap:N&mode=search`.replace(/\s+/g, '');
-
+  const stopsLabel =
+  segments.length > 1
+    ? `${segments.length - 1} stop${segments.length > 2 ? 's' : ''}`
+    : 'Nonstop';
+    // Helper to compute total flight duration if needed:
+    // const computeTotalDuration = (segments) => {
+    //   // Your logic here, or just use segment.duration if you have a single entry
+    //   return segments?.[0]?.duration || 'N/A';
+    // };
+  
   return (
     <Card
       variant="outlined"
@@ -47,25 +58,45 @@ const FlightCard = ({ flight, onNoteChange }) => {
       }}
     >
       <CardContent>
-        <Box mb={2}>
-          <Typography variant="h6">
-            {overallDeparture.iataCode} → {overallArrival.iataCode}
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#bbb' }}>
-            Departure: {formatDateTime(overallDeparture.at)} <br />
-            Arrival: {formatDateTime(overallArrival.at)}
-          </Typography>
-          {flight.price && (
+      <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="space-between"
+          mb={1}
+        >
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+              {formatTime(overallDeparture.at)} - {formatTime(overallArrival.at)}
+            </Typography>
+
+            {/* Duration and Stops */}
             <Typography variant="body2" sx={{ color: '#bbb' }}>
-              Price: {flight.price.total} {flight.price.currency}
+              {/* {computeTotalDuration(segments)} &bull;  */}
+              {stopsLabel}
+            </Typography>
+          </Box>
+
+          {/* Price */}
+          {flight.price && (
+            <Typography
+              variant="h5"
+              sx={{ fontWeight: 'bold'}}
+            >
+              {flight.price.total} {flight.price.currency}
             </Typography>
           )}
-          <Typography variant="body2" sx={{ color: '#bbb' }}>
-            Airline:{' '}
-            {carriersDict[segments[0]?.carrierCode] ||
-              `IATA code ${segments[0]?.carrierCode}`}
-          </Typography>
         </Box>
+
+        {/* Small route & airline text if needed, but not emphasized */}
+        <Typography variant="body2" sx={{ color: '#999', mb: 1 }}>
+          {overallDeparture.iataCode} → {overallArrival.iataCode}
+        </Typography>
+        <Typography variant="body2" sx={{ color: '#bbb', mb: 2 }}>
+          {/* Airline:{' '} */}
+          {carriersDict[segments[0]?.carrierCode] ||
+            `IATA code ${segments[0]?.carrierCode}`}
+        </Typography>
+
 
         <TextField
           label="Notes"
@@ -109,6 +140,11 @@ const FlightCard = ({ flight, onNoteChange }) => {
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#bbb' }}>
                     Duration: {segment.duration || 'N/A'}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#bbb' }}>
+                    Cabin:{' '}
+                    {flight.travelerPricings?.[0]?.fareDetailsBySegment?.[index]?.cabin || 'N/A'}
+
                   </Typography>
 
                   {index < segments.length - 1 && (

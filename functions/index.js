@@ -7,11 +7,12 @@ const axios = require('axios');
 const admin = require('firebase-admin');
 const { onRequest } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
+const functions = require('firebase-functions');
 
 //const serviceAccount = require("../flytogether-69521-firebase-adminsdk-fbsvc-969462f74c.json");
 admin.initializeApp();
 
-var db = admin.firestore();
+
 
 const app = express();
 app.use(cors());
@@ -20,6 +21,43 @@ app.use(express.json());
 require('dotenv').config();
 const AMADEUS_API_KEY = defineSecret('AMADEUS_API_KEY');
 const AMADEUS_API_SECRET = defineSecret('AMADEUS_API_SECRET');
+
+
+if (process.env.FUNCTIONS_EMULATOR) {
+
+  // Optionally, connect to Firestore emulator
+  const db = admin.firestore();
+  db.settings({
+    host: 'localhost:8080',
+    ssl: false,
+  });
+
+  // Optionally, connect to Auth emulator
+  admin.auth().useEmulator('http://localhost:9099/');
+} else {
+  // Initialize the admin SDK with default settings for production
+  var db = admin.firestore();
+}
+
+// Your Cloud Functions go here
+
+// authenticate middleware (we don't use this now)
+async function authenticate(req, res, next) {
+  const authHeader = req.headers.authorization || '';
+  const tokenMatch = authHeader.match(/^Bearer (.+)$/);
+  if (!tokenMatch) {
+    return res.status(401).json({ message: 'No auth token provided' });
+  }
+  const idToken = tokenMatch[1];
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    req.user = decodedToken; // optionally attach user data to req
+    next();
+  } catch (error) {
+    return res.status(401).json({ message: 'Invalid auth token', error: error.message });
+  }
+}
+
 
 // Get Amadeus access token
 async function getAccessToken() 
@@ -44,7 +82,7 @@ async function getAccessToken()
 
 // Flight search endpoint – expects query params: origin, destination, departureDate, (optional) returnDate, adults
 app.get('/api/search', async (req, res) => {
-  const { origin, destination, departureDate, returnDate, adults = 1 } = req.query;
+  const { origin, destination, departureDate, returnDate, adults, travelClass } = req.query;
   if (!origin || !destination || !departureDate) {
     return res.status(400).json({
       message: 'Missing required parameters: origin, destination, departureDate',
@@ -76,6 +114,7 @@ app.get('/api/search', async (req, res) => {
       destinationLocationCode: destination,
       departureDate,
       adults,
+      travelClass,
       currencyCode: 'USD',
     };
     if (returnDate) params.returnDate = returnDate;
@@ -100,14 +139,16 @@ app.get('/api/search', async (req, res) => {
 // Create a new flight session and store it in Firestore.
 app.post('/api/sessions', async (req, res) => {
   console.log('Received payload:', req.body);
-  const { wishlist, wishlistTitle } = req.body;
+  const { wishlist, wishlistTitle, sharedWith } = req.body;
   if (!Array.isArray(wishlist) || wishlist.length === 0) {
     return res.status(400).json({ message: 'Wishlist must have at least one flight' });
   }
-  const sessionId = Math.random().toString(36).substring(2, 10);
+  const sessionId = Math.random().toString(36).substring(2, 18);
+  //sharedWith = sharedWith || []; // default to empty array
   const sessionData = {
     wishlist,
     wishlistTitle,
+    sharedWith
     //created: admin.firestore.FieldValue.serverTimestamp(),
   };
   try {
@@ -138,7 +179,7 @@ app.get('/api/sessions/:sessionId', async (req, res) => {
 // Update an existing session stored in Firestore.
 app.put('/api/sessions/:sessionId', async (req, res) => {
   const { sessionId } = req.params;
-  const {wishlist, wishlistTitle } = req.body;
+  const {wishlist, wishlistTitle, sharedWith } = req.body;
   if (!wishlistTitle && !wishlist && !sessionId) {
     return res.status(400).json({ message: 'Invalid flights data' });
   }
@@ -151,6 +192,7 @@ app.put('/api/sessions/:sessionId', async (req, res) => {
     const updatedData = {
       wishlist,
       wishlistTitle,
+      sharedWith, 
       updated: admin.firestore.FieldValue.serverTimestamp(),
     };
     await sessionRef.update(updatedData);
@@ -159,6 +201,42 @@ app.put('/api/sessions/:sessionId', async (req, res) => {
   } catch (error) {
     console.error('Error updating session:', error);
     return res.status(500).json({ message: 'Error updating session' });
+  }
+});
+
+
+/**
+ * NEW: GET all sessions that include the signed-in user's email in `sharedWith`.
+ * We authorize by:
+ * 1) requiring `authenticate` => user must present a valid ID token
+ * 2) checking req.user.email === req.params.email
+ */
+app.get('/api/sessions/shared-with/:email', authenticate, async (req, res) => {
+  try {
+    const requestedEmail = req.params.email;
+    const userEmail = req.user.email; // from the decoded token
+    if (!userEmail || userEmail.toLowerCase() !== requestedEmail.toLowerCase()) {
+      return res.status(403).json({ message: `Not authorized to view sessions for this email, requested:${req.user.email} and user:${req.params.email}` });
+    }
+
+    // Query the 'flightsessions' collection, searching for docs
+    // where the 'sharedWith' array contains the user's email
+    const snapshot = await db.collection('flightsessions')
+      .where('sharedWith', 'array-contains', requestedEmail)
+      .get();
+
+    const results = [];
+    snapshot.forEach(doc => {
+      results.push({
+        sessionId: doc.id,
+        wishlistTitle: doc.data().wishlistTitle,
+      });
+    });
+
+    return res.json(results);
+  } catch (error) {
+    console.error('Error fetching sessions by email:', error);
+    return res.status(500).json({ message: 'Error fetching sessions', error: error.message });
   }
 });
 
