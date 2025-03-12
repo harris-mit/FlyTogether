@@ -19,11 +19,13 @@ import { DragDropContext } from 'react-beautiful-dnd';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { v4 as uuidv4 } from 'uuid';
 
 import { fetchSession, updateSession } from '../services/sessionService';
 import { searchFlights } from '../services/flightService';
 import FlightList from '../components/FlightList';
+import { refreshSessionPrices } from '../services/sessionService';
 
 const PAGE_SIZE = 10;
 
@@ -47,18 +49,25 @@ const SharedSession = () => {
   const [stopsFilter, setStopsFilter] = useState('any');
   const [availablePage, setAvailablePage] = useState(0);
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+
   // Fetch session data on component mount
+
+  // Add a helper to load the session
+  const fetchSessionData = async () => {
+    try {
+      const data = await fetchSession(sessionId);
+      setWishlist(data.wishlist || []);
+      setWishlistTitle(data.wishlistTitle || '');
+      setSharedWith(data.sharedWith || []);
+    } catch (err) {
+      console.error('Error fetching session:', err);
+    }
+  };
+
   useEffect(() => {
-    (async () => {
-      try {
-        const data = await fetchSession(sessionId); // GET /api/sessions/:sessionId
-        setWishlist(data.wishlist || []);
-        setWishlistTitle(data.wishlistTitle || '');
-        setSharedWith(data.sharedWith || []);
-      } catch (err) {
-        console.error('Error fetching session:', err);
-      }
-    })();
+    fetchSessionData();
   }, [sessionId]);
 
   // Re-check pagination boundaries if search results or stops filter change
@@ -96,6 +105,19 @@ const SharedSession = () => {
       });
     } catch (err) {
       console.error('Error updating session note:', err);
+    }
+  };
+
+  const handleRefreshPrices = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshSessionPrices(sessionId);
+      // Reload session data so we see the updated prices
+      await fetchSessionData();
+    } catch (error) {
+      console.error('Error refreshing prices:', error);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -507,9 +529,29 @@ const SharedSession = () => {
               droppableId="wishlist"
               onNoteChange={handleNoteChange}
             />
+          <Button 
+          onClick={handleRefreshPrices}
+          disabled={isRefreshing}
+          startIcon={<RefreshIcon />}
+          sx={{
+            mt: 2,
+            backgroundColor: '#333',
+            color: '#fff',
+            textTransform: 'none',
+            boxShadow: 'none',
+            '&:hover': {
+              backgroundColor: '#444',
+              boxShadow: 'none',
+            },
+          }}
+        >
+          {isRefreshing ? 'Refreshing Prices...' : 'Refresh Top Pick Prices'}
+        </Button>
           </Grid>
+
         </Grid>
       </DragDropContext>
+
     </Box>
   );
 };

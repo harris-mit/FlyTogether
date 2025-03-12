@@ -1,4 +1,3 @@
-
 const logger = require('firebase-functions/logger'); 
 // or use console.log for logging
 const express = require('express');
@@ -96,7 +95,7 @@ app.get('/api/search', async (req, res) => {
   
     const now = Date.now();
     const timeWindow = 60000; // 1 minute
-    const maxRequests = 3;
+    const maxRequests = 6;
   
     let requestTimes = userData.exists ? userData.data().requests || [] : [];
     requestTimes = requestTimes.filter(timestamp => now - timestamp < timeWindow);
@@ -113,9 +112,9 @@ app.get('/api/search', async (req, res) => {
       originLocationCode: origin,
       destinationLocationCode: destination,
       departureDate,
-      adults,
-      travelClass,
-      currencyCode: 'USD',
+      adults: 1, // update price even if just one seat left
+      // travelClass: travelClass || 'ECONOMY',
+      // currencyCode: 'USD',
     };
     if (returnDate) params.returnDate = returnDate;
 

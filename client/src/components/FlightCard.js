@@ -164,7 +164,7 @@ const FlightCard = ({ flight, onNoteChange }) => {
           </Box>
         </Collapse>
 
-        <Button
+        {/* <Button
           variant="contained"
           onClick={(e) => {
             e.stopPropagation();
@@ -183,7 +183,7 @@ const FlightCard = ({ flight, onNoteChange }) => {
           }}
         >
           Book
-        </Button>
+        </Button> */}
       </CardContent>
     </Card>
   );
